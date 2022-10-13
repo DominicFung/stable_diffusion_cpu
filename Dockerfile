@@ -14,6 +14,6 @@ COPY stable_diffusion_engine.py demo.py demo_web.py /src/
 COPY data/ /src/data/
 
 # download models
-RUN python3 demo.py --num-inference-steps 1 --prompt "test" --output /tmp/test.jpg
+RUN python3 demo.py --build
 
 ENTRYPOINT ["python3", "demo.py"]

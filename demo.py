@@ -9,6 +9,23 @@ from diffusers import LMSDiscreteScheduler, PNDMScheduler
 import cv2
 import numpy as np
 
+import boto3 
+
+BUCKET_NAME = "TextToShirtAIBucket"
+
+def build(args):
+  scheduler = LMSDiscreteScheduler(
+      beta_start=args.beta_start,
+      beta_end=args.beta_end,
+      beta_schedule=args.beta_schedule,
+      tensor_format="np"
+  )
+
+  StableDiffusionEngine(
+      model = args.model,
+      scheduler = scheduler,
+      tokenizer = args.tokenizer
+  )
 
 def main(args):
     if args.seed is not None:
@@ -44,6 +61,9 @@ def main(args):
     )
     cv2.imwrite(args.output, image)
 
+    client = boto3.client("s3")
+    client.upload_file(args.output, args.s3bucket, args.output)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -70,5 +90,12 @@ if __name__ == "__main__":
     parser.add_argument("--mask", type=str, default=None, help="mask of the region to inpaint on the initial image")
     # output name
     parser.add_argument("--output", type=str, default="output.png", help="output image name")
+
+    parser.add_argument("--build", action='store_true', help="Just builds the model to be cached with the image.")
+    parser.add_argument("--s3bucket", type=str, default=BUCKET_NAME, help="S3 Bucket Name in us-east-1 to store the output")
     args = parser.parse_args()
-    main(args)
+
+    if (args.build):
+      build(args)
+    else:
+      main(args)
