@@ -6,7 +6,7 @@ from openvino.runtime import Core
 from transformers import CLIPTokenizer
 # utils
 from tqdm import tqdm
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, scan_cache_dir
 from diffusers import LMSDiscreteScheduler, PNDMScheduler
 import cv2
 
@@ -23,6 +23,10 @@ class StableDiffusionEngine:
             tokenizer="openai/clip-vit-large-patch14",
             device="CPU"
     ):
+        print("StableDiffusionEngine init")
+        hf_cache_info = scan_cache_dir()
+        print(hf_cache_info)
+
         self.tokenizer = CLIPTokenizer.from_pretrained(tokenizer)
         self.scheduler = scheduler
         # models

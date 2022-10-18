@@ -1,6 +1,7 @@
 # -- coding: utf-8 --`
-import argparse
-import os
+import argparse, datetime
+from os.path import exists
+
 # engine
 from stable_diffusion_engine import StableDiffusionEngine
 # scheduler
@@ -13,21 +14,27 @@ import boto3
 
 BUCKET_NAME = "TextToShirtAIBucket"
 
+def iso_date_time():
+    return datetime.datetime.now().isoformat()
+
 def build(args):
+  print("build pipeline start:", iso_date_time())
   scheduler = LMSDiscreteScheduler(
       beta_start=args.beta_start,
       beta_end=args.beta_end,
       beta_schedule=args.beta_schedule,
       tensor_format="np"
   )
-
+  print("enter stable deffusion:", iso_date_time())
   StableDiffusionEngine(
       model = args.model,
       scheduler = scheduler,
       tokenizer = args.tokenizer
   )
+  print("build pipeline end:", iso_date_time())
 
 def main(args):
+    print("load pipeline start:", iso_date_time())
     if args.seed is not None:
         np.random.seed(args.seed)
     if args.init_image is None:
@@ -61,8 +68,32 @@ def main(args):
     )
     cv2.imwrite(args.output, image)
 
-    client = boto3.client("s3")
+    env_vars = { "profile": None }
+    if exists("./.env.local"):
+      with open("./.env.local") as f:
+        for line in f:
+          if line.startswith('#') or not line.strip():
+              continue
+          key, value = line.strip().split('=', 1)
+          env_vars[key] = value
+      
+    client=None
+    if env_vars["profile"] != None:
+      session = boto3.Session(profile_name=env_vars["profile"])
+      client = session.client('s3')
+    else:
+      client = boto3.client("s3")
+
+    session = boto3.Session()
+    credentials = session.get_credentials()
+
+    current_credentials = credentials.get_frozen_credentials()
+    print(current_credentials.access_key)
+    print(current_credentials.secret_key)
+    print(current_credentials.token)
+    
     client.upload_file(args.output, args.s3bucket, args.output)
+    print("completed pipeline:", iso_date_time(), flush=True)
 
 
 if __name__ == "__main__":
